@@ -1,0 +1,57 @@
+-- CONECTAR SERVIDOR HDZNT169
+SET NOCOUNT OFF
+Declare @Recurso nvarchar(15)
+--SET @RECURSO='015005'
+--SET @Recurso='615005' -- Nutrisa
+--SET @Recurso='765010'
+--SET @Recurso='945218'
+set @Recurso='535849'
+--SELECT RMRESC,RMDESC,'HDZALM' as Source FROM OPENQUERY(HDZ54,'SELECT * FROM HDZALM.RESMST') where RMRESC = @Recurso
+--SELECT RMRESC,RMDESC,'HDZGPO' as Source FROM OPENQUERY(HDZ54,'SELECT * FROM HDZGPO.RESMST') where RMRESC = @Recurso
+--select [ID_Herdez],[DescripcionStd],'S0_RecursoHelados'  as Source from BS_S0_RecursoHelados  WHERE CAST ( [ID_Herdez] AS VARCHAR (15) )=@Recurso
+--SELECT [Número de Recurso],	[Descripción Hérdez],[Descripción del Recurso],'MDM' as Source from HSVDMDDBPPSQL.MDMHERDEZ.mdm.vwMDM_Productos where [Número de Recurso]=@Recurso
+--SELECT ID_RECURSO,RECURSO,RECURSO_C,  'DWH'AS Source FROM HDZNT169.DWH_CDC.DBO.RECURSO where ID_RECURSO=@Recurso
+--SELECT * FROM BS_Nutrisa_S0_Recurso where ID_RECURSO=@Recurso
+
+SELECT 
+  P.[Número de Recurso] as NumeroDeRecurso_MDM
+, P.[Descripción del Recurso] AS DescripcionDelRecurso_MDM
+--, R.RECURSO as Recurso_DWH
+, R.RECURSO_C AS Recurso_C_DWH
+, AL.RMDESC AS 'HDZALM_RMDESC'
+, GP.RMDESC AS 'HDZGPO_RMDESC'
+, 'Recurso_C' as Tipo
+, CASE WHEN GP.RMDESC=R.RECURSO_C THEN 'OK' ELSE 'X' END AS BI_X_ACTUALIZAR
+, CASE WHEN GP.RMDESC=P.[Descripción del Recurso] THEN 'OK' ELSE 'X' END AS MDM_X_ACTUALIZAR
+, CASE WHEN GP.RMDESC=AL.RMDESC THEN 'OK' ELSE 'X' END AS ALMACEN_VS_GRUPO_AS400
+from      HSVDMDDBPPSQL.MDMHERDEZ.mdm.vwMDM_Productos P WITH(NOLOCK)
+LEFT JOIN HDZNT169.DWH_CDC.DBO.RECURSO R WITH(NOLOCK) ON P.[Número de Recurso]=R.ID_RECURSO
+LEFT JOIN OPENQUERY(HDZ54,'SELECT * FROM HDZALM.RESMST ')  AL  on AL.RMRESC=R.ID_RECURSO
+LEFT JOIN OPENQUERY(HDZ54,'SELECT * FROM HDZGPO.RESMST')  GP  on GP.RMRESC=R.ID_RECURSO
+WHERE 1=1
+--AND P.[Número de Recurso]= @Recurso
+AND (P.[Descripción del Recurso]<>R.RECURSO_C OR P.[Descripción del Recurso]<>GP.RMDESC  )
+order by 7 desc,8 desc,9 desc
+
+
+
+
+SELECT 
+  P.[Número de Recurso]
+, AL.RMRESC
+FROM      HSVDMDDBPPSQL.MDMHERDEZ.mdm.vwMDM_Productos P WITH(NOLOCK)
+FULL OUTER JOIN OPENQUERY(HDZ54,'SELECT * FROM HDZALM.RESMST ')  AL  on P.[Número de Recurso]=AL.RMRESC 
+where 1=1
+
+SELECT * FROM OPENQUERY(HDZ54,'SELECT * FROM HDZALM.RESMST ') WHERE RMRESC IS NOT NULL AND RMRSCL='PT'--9593
+SELECT * FROM OPENQUERY(HDZ54,'SELECT * FROM HDZGPO.RESMST ') WHERE RMRESC IS NULL --8581
+
+SELECT * FROM (	SELECT * 
+			    FROM HSVDMDDBPPSQL.MDMHERDEZ.mdm.vwMDM_ModeloProductos  WITH(NOLOCK) 
+			    WHERE [NÚMERO DE RECURSO] IS NOT NULL
+			   ) AS P --7221
+			   
+-- La validacion se va sobre solo 2132 recursos
+
+
+	
